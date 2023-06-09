@@ -14,20 +14,28 @@ router.post("/register", async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10)
-    console.log(hashedPassword)
+    const newUser = new UserModel({ email, password: hashedPassword });
+    await newUser.save();
 
-    if(hashedPassword){
-        const newUser = new UserModel({ email, password: hashedPassword });
-        await newUser.save();
-
-        res.json({message: "User Registered Successfully!"});
-    }else{
-        res.json({message: "something went wrong"});
-    }
-
-    
+    res.json({message: "User Registered Successfully!"});    
 });
 
-router.post("/login");
+router.post("/login", async (req, res) => {
+    const { email, password } = req.body;
+    const user = await UserModel.findOne({ email });
+
+    if(!user){
+        return res.json({ message: "Account doesn't exist for this email" });
+    }
+
+    const isPasswordVaild = await bcrypt.compare(password, user.password);
+
+    if(!isPasswordVaild){
+        res.json({ message: "Email or Password is incorrect"});
+    }
+
+    const token = jwt.sign({ id: user._id }, "secret");
+    res.json({ token, userId: user._id })
+});
 
 export { router as userRouter };
